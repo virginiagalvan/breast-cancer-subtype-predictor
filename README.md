@@ -6,8 +6,10 @@
 ![SQL](https://img.shields.io/badge/SQL-4479A1?style=flat&logo=postgresql&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
-![Status](https://img.shields.io/badge/status-in_progress-yellow?style=flat)
+![Status](https://img.shields.io/badge/status-complete-brightgreen?style=flat)
 ![License](https://img.shields.io/badge/license-MIT-blue?style=flat)
+
+**Live API:** [tcga-brca-subtype-classifier.onrender.com/docs](https://tcga-brca-subtype-classifier.onrender.com/docs) — interactive Swagger UI, try `/predict` directly in the browser. Deployed on Render's free tier, so it spins down after inactivity; the first request after a period of idle time can take up to ~50 seconds while it wakes up.
 
 ## The Problem
 
@@ -39,6 +41,7 @@ tcga-brca-subtype-classifier/
 │   └── 03_shap_interpretability.ipynb
 ├── api/                      # FastAPI app, trained model bundle, test script
 ├── figures/
+├── Dockerfile
 ├── requirements.txt
 └── README.md
 ```
@@ -63,17 +66,22 @@ Underlying data originates from **The Cancer Genome Atlas (TCGA)**, a public res
 
 ## How to Run
 
+**Notebooks** are designed to run in Google Colab (each one prompts for the required input files via an upload dialog — no local setup needed). Open them directly from the `notebooks/` folder on GitHub, or upload them to [colab.research.google.com](https://colab.research.google.com).
+
+**API, locally:**
 ```bash
 git clone https://github.com/virginiagalvan/tcga-brca-subtype-classifier.git
 cd tcga-brca-subtype-classifier
 pip install -r requirements.txt
-jupyter notebook notebooks/01_data_acquisition_qc.ipynb
-```
-
-API (once built):
-```bash
 cd api
 uvicorn main:app --reload
+```
+Then open `http://127.0.0.1:8000/docs` for the interactive API docs.
+
+**API, with Docker:**
+```bash
+docker build -t tcga-brca-classifier .
+docker run -p 8000:8000 tcga-brca-classifier
 ```
 
 ---
