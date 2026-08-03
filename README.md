@@ -39,7 +39,9 @@ tcga-brca-subtype-classifier/
 │   ├── 01_data_acquisition_qc.ipynb
 │   ├── 02_modeling_cross_validation.ipynb
 │   └── 03_shap_interpretability.ipynb
-├── api/                      # FastAPI app, trained model bundle, test script
+├── api/                      # FastAPI app, trained model bundle, test scripts
+├── examples/
+│   └── sample_patients.csv   # 5 real patients (one per subtype), ready to upload to POST /predict/csv
 ├── figures/
 ├── Dockerfile
 ├── requirements.txt
