@@ -1,4 +1,4 @@
-# Predicting Breast Cancer Treatment Subtype from Gene Expression Data
+# ML-Based Prediction of Breast Cancer Treatment Subtype from Gene Expression Data
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=flat&logo=scikit-learn&logoColor=white)
@@ -15,19 +15,27 @@
 
 Breast cancer isn't one disease. This project predicts which of 5 breast cancer subtypes (PAM50: Luminal A, Luminal B, HER2-enriched, Basal-like, Normal-like) a tumor has, using gene expression data — the subtype is what determines whether a patient receives hormone therapy, targeted therapy, or chemotherapy. It's a real clinical decision-support task, built on public patient data (981 patients, TCGA-BRCA), not a synthetic benchmark.
 
-**This project builds an end-to-end, production-shaped pipeline — from raw public data through a deployed, queryable API — that classifies patients with 93% accuracy on held-out test data, and independently identifies the same gene (ESR1, the estrogen receptor) that oncologists already rely on to guide treatment.**
+**This project frames subtype prediction as a supervised multi-class classification problem: three models (Logistic Regression, Random Forest, XGBoost) are compared via cross-validation, the best one is interpreted with SHAP, and it's deployed end-to-end as a live REST API. It classifies patients with 93% accuracy on held-out test data — and, using no prior medical knowledge, independently ranks ESR1 (the estrogen receptor) as its top predictive feature, the same gene oncologists already rely on to guide treatment.**
 
 ---
 
 ## Results
 
 - **93% accuracy** on held-out test data (981 patients, 80/20 stratified split), best model: **XGBoost** (F1-macro 0.86, 91% mean accuracy across 5-fold cross-validation).
-- Chosen after comparing 3 candidate models (Logistic Regression, Random Forest, XGBoost) under identical cross-validation and class-imbalance handling.
+- Chosen after comparing 3 candidate models under identical cross-validation folds and identical class-imbalance handling (per-sample weighting), so the comparison isn't confounded by each model handling imbalance differently.
 - **Interpretability:** without being told anything about cancer biology, the model's top-ranked predictive gene was **ESR1** (estrogen receptor) — the same gene oncologists use to decide whether a patient receives hormone therapy. **ERBB2** (HER2, target of trastuzumab) also ranked in the top 10.
 
-| Model comparison (cross-validation) | Test set performance | Feature importance (SHAP) |
-|---|---|---|
-| ![Model comparison](figures/fig5_model_comparison_cv.png) | ![Confusion matrix](figures/fig6_confusion_matrix_test.png) | ![SHAP global importance](figures/fig7_shap_global_importance.png) |
+**Model comparison (5-fold cross-validation, mean scores):**
+
+| Model | Accuracy | F1-macro | ROC-AUC (OvR) |
+|---|---|---|---|
+| Logistic Regression | 0.83 | 0.78 | 0.96 |
+| Random Forest | 0.90 | 0.81 | 0.99 |
+| **XGBoost (best)** | **0.91** | **0.86** | **0.99** |
+
+| Test set performance | Feature importance (SHAP) |
+|---|---|
+| ![Confusion matrix](figures/fig6_confusion_matrix_test.png) | ![SHAP global importance](figures/fig7_shap_global_importance.png) |
 
 ---
 
@@ -66,8 +74,8 @@ breast-cancer-subtype-predictor/
 
 | # | Notebook | Status | Description |
 |---|---|---|---|
-| 01 | `01_data_acquisition_qc.ipynb` | ✅ Complete | Pull PAM50 clinical annotations + expression data from cBioPortal; QC, EDA (PCA, gene correlation, marker genes) |
-| 02 | `02_modeling_cross_validation.ipynb` | ✅ Complete | Load data into SQL, assemble cohort via SQL query, compare LogReg/Random Forest/XGBoost via cross-validation (XGBoost best: F1-macro 0.86, accuracy 91%), evaluate on held-out test set (93% accuracy), export model for the API |
+| 01 | `01_data_acquisition_qc.ipynb` | ✅ Complete | Pull PAM50 clinical annotations + expression data from cBioPortal; QC, EDA (PCA, gene correlation, marker genes); load into SQL and assemble the modeling cohort via SQL query |
+| 02 | `02_modeling_cross_validation.ipynb` | ✅ Complete | Compare Logistic Regression, Random Forest, and XGBoost via cross-validation (XGBoost best: F1-macro 0.86, accuracy 91%), evaluate the best model on the held-out test set (93% accuracy), export it for the API |
 | 03 | `03_shap_interpretability.ipynb` | ✅ Complete | SHAP-based model interpretation (TreeExplainer), global feature ranking, biological cross-validation against ESR1/ERBB2/MKI67, single-prediction explanation |
 
 ---
