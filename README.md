@@ -1,4 +1,4 @@
-# TCGA-BRCA Molecular Subtype Classifier
+# Predicting Breast Cancer Treatment Subtype from Gene Expression Data
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=flat&logo=scikit-learn&logoColor=white)
@@ -13,9 +13,21 @@
 
 ## The Problem
 
-Breast cancer isn't one disease — molecular subtype (PAM50: Luminal A, Luminal B, HER2-enriched, Basal-like) drives treatment choice (hormonal therapy vs. anti-HER2 therapy vs. chemotherapy). Subtyping from gene expression is a real clinical decision-support task, not a synthetic benchmark.
+Breast cancer isn't one disease. This project predicts which of 5 breast cancer subtypes (PAM50: Luminal A, Luminal B, HER2-enriched, Basal-like, Normal-like) a tumor has, using gene expression data — the subtype is what determines whether a patient receives hormone therapy, targeted therapy, or chemotherapy. It's a real clinical decision-support task, built on public patient data (981 patients, TCGA-BRCA), not a synthetic benchmark.
 
-**This project builds an end-to-end, production-shaped pipeline that predicts PAM50 molecular subtype from gene expression and clinical covariates — from raw public data through a deployed, queryable API.**
+**This project builds an end-to-end, production-shaped pipeline — from raw public data through a deployed, queryable API — that classifies patients with 93% accuracy on held-out test data, and independently identifies the same gene (ESR1, the estrogen receptor) that oncologists already rely on to guide treatment.**
+
+---
+
+## Results
+
+- **93% accuracy** on held-out test data (981 patients, 80/20 stratified split), best model: **XGBoost** (F1-macro 0.86, 91% mean accuracy across 5-fold cross-validation).
+- Chosen after comparing 3 candidate models (Logistic Regression, Random Forest, XGBoost) under identical cross-validation and class-imbalance handling.
+- **Interpretability:** without being told anything about cancer biology, the model's top-ranked predictive gene was **ESR1** (estrogen receptor) — the same gene oncologists use to decide whether a patient receives hormone therapy. **ERBB2** (HER2, target of trastuzumab) also ranked in the top 10.
+
+| Model comparison (cross-validation) | Test set performance | Feature importance (SHAP) |
+|---|---|---|
+| ![Model comparison](figures/fig5_model_comparison_cv.png) | ![Confusion matrix](figures/fig6_confusion_matrix_test.png) | ![SHAP global importance](figures/fig7_shap_global_importance.png) |
 
 ---
 
@@ -28,12 +40,14 @@ Breast cancer isn't one disease — molecular subtype (PAM50: Luminal A, Luminal
 5. **API** — FastAPI endpoint serving the trained model (patient features in → subtype prediction out).
 6. **Deployment** — Dockerized and deployed to Render (free tier).
 
+**On feature selection:** the feature set is the 50-gene PAM50 panel rather than the full transcriptome (~20,000 genes) — a clinically-validated gene panel established through prior research as optimally discriminative for these subtypes. Using it *is* the feature selection step, done through domain knowledge rather than re-derived statistically from scratch.
+
 ---
 
 ## Repository Structure
 
 ```
-tcga-brca-subtype-classifier/
+breast-cancer-subtype-predictor/
 ├── data/                     # Raw and processed data (clinical + expression)
 ├── notebooks/
 │   ├── 01_data_acquisition_qc.ipynb
@@ -72,8 +86,8 @@ Underlying data originates from **The Cancer Genome Atlas (TCGA)**, a public res
 
 **API, locally:**
 ```bash
-git clone https://github.com/virginiagalvan/tcga-brca-subtype-classifier.git
-cd tcga-brca-subtype-classifier
+git clone https://github.com/virginiagalvan/breast-cancer-subtype-predictor.git
+cd breast-cancer-subtype-predictor
 pip install -r requirements.txt
 cd api
 uvicorn main:app --reload
@@ -82,8 +96,8 @@ Then open `http://127.0.0.1:8000/docs` for the interactive API docs.
 
 **API, with Docker:**
 ```bash
-docker build -t tcga-brca-classifier .
-docker run -p 8000:8000 tcga-brca-classifier
+docker build -t breast-cancer-subtype-predictor .
+docker run -p 8000:8000 breast-cancer-subtype-predictor
 ```
 
 ---
