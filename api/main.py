@@ -48,6 +48,9 @@ app = FastAPI(
     description=(
         "Predicts PAM50 molecular subtype (Basal, Her2, LumA, LumB, Normal) from gene "
         "expression z-scores across the 50-gene PAM50 panel.\n\n"
+        "**⏱️ First request may be slow:** this API is deployed on Render's free tier, "
+        "which spins down after a period of inactivity. The first request after idle time "
+        "can take up to ~50 seconds while it wakes up — subsequent requests are fast.\n\n"
         "**In a real deployment**, this API would be called by an upstream bioinformatics "
         "pipeline that processes raw sequencing data into normalized expression values — "
         "not filled in by hand. The endpoints below are set up so a person can still try the "
@@ -57,19 +60,32 @@ app = FastAPI(
         "`POST /predict` below.\n"
         "2. Multiple patients at once — call `POST /predict/csv` and upload a CSV file "
         "(one row per patient, one column per gene).\n\n"
+        "Both prediction endpoints use **POST**, not GET: a full patient record (50 gene "
+        "values, or a whole CSV file) is structured data sent *to* the server as part of the "
+        "request, not just a lookup key in a URL — which is exactly what POST is for.\n\n"
         "**Input format:** each field/column is a gene symbol (see `GET /features` for the "
         "exact list) mapped to its mRNA expression z-score, computed relative to diploid "
         "samples — the same convention used by the TCGA-BRCA PanCancer Atlas study this "
         "model was trained on (via cBioPortal).\n\n"
         "Source code, training notebooks, and the full dataset: "
-        "[github.com/virginiagalvan/tcga-brca-subtype-classifier]"
-        "(https://github.com/virginiagalvan/tcga-brca-subtype-classifier)."
+        "[github.com/virginiagalvan/breast-cancer-subtype-predictor]"
+        "(https://github.com/virginiagalvan/breast-cancer-subtype-predictor)."
     ),
     version="1.0.0",
+    openapi_tags=[
+        {
+            "name": "Prediction",
+            "description": "Core endpoints — send patient gene expression data, get a PAM50 subtype prediction back.",
+        },
+        {
+            "name": "Utilities",
+            "description": "Helper endpoints for exploring the API and getting a ready-to-use example.",
+        },
+    ],
 )
 
 
-@app.get("/", summary="API info")
+@app.get("/", summary="API info", tags=["Utilities"])
 def root():
     return {
         "message": "TCGA-BRCA subtype classifier API",
@@ -79,7 +95,7 @@ def root():
     }
 
 
-@app.get("/health", summary="Health check")
+@app.get("/health", summary="Health check", tags=["Utilities"])
 def health():
     return {"status": "ok"}
 
@@ -88,6 +104,7 @@ def health():
     "/features",
     summary="List expected input genes",
     description="Returns the 50 PAM50 gene symbols the model expects, in the exact order used during training.",
+    tags=["Utilities"],
 )
 def features():
     return {"feature_order": feature_order, "n_features": len(feature_order)}
@@ -103,6 +120,7 @@ def features():
         "subtype is returned in the `X-True-Subtype` response header (not in the body), so "
         "the body itself stays copy-paste-ready."
     ),
+    tags=["Utilities"],
 )
 def example(response: Response):
     response.headers["X-True-Subtype"] = example_patient["true_subtype"]
@@ -112,12 +130,15 @@ def example(response: Response):
 @app.post(
     "/predict",
     response_model=PredictionResponse,
-    summary="Predict PAM50 subtype",
+    summary="Predict PAM50 subtype for one patient",
     description=(
         "Takes gene expression z-scores for the 50-gene PAM50 panel and returns the "
         "predicted molecular subtype with per-class probabilities. Don't have a sample "
-        "handy? Call `GET /example` first and paste its `features` object here."
+        "handy? Call `GET /example` first and paste its `features` object here.\n\n"
+        "**Why POST?** The full 50-gene profile is sent as structured data in the request "
+        "body — GET requests aren't meant to carry a payload like this."
     ),
+    tags=["Prediction"],
 )
 def predict(patient: PatientFeatures):
     X = pd.DataFrame([patient.model_dump()])[feature_order]
@@ -136,14 +157,17 @@ def predict(patient: PatientFeatures):
 
 @app.post(
     "/predict/csv",
-    summary="Predict PAM50 subtype for multiple patients (CSV upload)",
+    summary="⬆️ Upload a CSV to predict subtypes for multiple patients",
     description=(
         "Upload a CSV file with one row per patient and one column per gene (see "
         "`GET /features` for the required column names). An optional `SAMPLE_ID` or "
         "`PATIENT_ID` column, if present, is echoed back with each prediction so results "
         "can be matched to rows. Any other extra columns are ignored. Returns one "
-        "prediction per row."
+        "prediction per row.\n\n"
+        "**Why POST?** The uploaded file is sent as data in the request body — there's no "
+        "way to attach a file to a GET request."
     ),
+    tags=["Prediction"],
 )
 async def predict_csv(file: UploadFile = File(...)):
     contents = await file.read()
