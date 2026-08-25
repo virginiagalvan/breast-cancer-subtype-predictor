@@ -1,0 +1,13 @@
+name: Keep API Awake
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the live API to prevent Render cold start
+        run: curl -sf https://tcga-brca-subtype-classifier.onrender.com/health || curl -sf https://tcga-brca-subtype-classifier.onrender.com/
