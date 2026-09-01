@@ -24,13 +24,16 @@ GENE_DESCRIPTION = (
     "convention). Typical range: roughly -3 to 3."
 )
 
-PatientFeatures = create_model(
-    "PatientFeatures",
-    **{
-        gene: (float, Field(..., description=f"{GENE_DESCRIPTION} Gene: {gene}."))
-        for gene in feature_order
-    },
-)
+# Built dynamically (one field per PAM50 gene) rather than declared by hand, since
+# the 50 gene names come from the trained model bundle, not from a fixed schema.
+field_definitions = {
+    gene: (float, Field(..., description=f"{GENE_DESCRIPTION} Gene: {gene}."))
+    for gene in feature_order
+}
+# Pydantic's create_model() type stubs can't statically verify a **kwargs dict built
+# this way, even though it's the pattern Pydantic itself recommends for dynamic models
+# (see pydantic/pydantic#3959) -- this is a known static-typing gap, not a runtime bug.
+PatientFeatures: type[BaseModel] = create_model("PatientFeatures", **field_definitions)  # type: ignore[call-overload]
 
 
 class PredictionResponse(BaseModel):
@@ -140,7 +143,7 @@ def example(response: Response):
     ),
     tags=["Prediction"],
 )
-def predict(patient: PatientFeatures):
+def predict(patient: PatientFeatures):  # pyright: ignore[reportInvalidTypeForm]
     X = pd.DataFrame([patient.model_dump()])[feature_order]
     predicted_idx = model.predict(X)[0]
     predicted_proba = model.predict_proba(X)[0]
