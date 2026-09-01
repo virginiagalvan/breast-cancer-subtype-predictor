@@ -112,4 +112,5 @@ docker run -p 8000:8000 breast-cancer-subtype-predictor
 
 ## Author
 
-**Virginia Galván, PhD** · Bioinformatics · Genomic & Multi-Omics Data Science
+Virginia Galván – [LinkedIn](https://www.linkedin.com/in/virgina-galvan-390ba233b/)
+
